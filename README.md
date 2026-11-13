@@ -56,6 +56,8 @@ frappe_docker/
 
 The full `frappe_docker` documentation is available in [`docs/`](docs/) and published at [frappe.github.io/frappe_docker](https://frappe.github.io/frappe_docker/).
 
+For this workspace's local POS setup, see [Development and production configuration](PROJECT_CONFIGURATION.md) and the [POS admin dashboard](pos-admin-dashboard/README.md).
+
 Documentation is gradually being organized into [Tutorials](docs/10-tutorials/index.md), [How-to Guides](docs/11-how-to/index.md), [Reference](docs/12-reference/index.md), and [Explanation](docs/13-explanation/index.md). The category indexes explain each category's purpose. To help, see the [documentation contribution guide](docs/11-how-to/01-contribute-documentation.md).
 
 ### Recommended entry points:

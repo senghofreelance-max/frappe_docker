@@ -1,5 +1,5 @@
 {
-  "python.defaultInterpreterPath": "${workspaceFolder}/frappe-bench/env/bin/python",
+  "python.defaultInterpreterPath": "${workspaceFolder}/dev-bench/env/bin/python",
   "files.watcherExclude": {
     // --- Node modules ---
     "**/node_modules/**": true,

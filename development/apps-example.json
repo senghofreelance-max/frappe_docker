@@ -2,5 +2,9 @@
   {
     "url": "https://github.com/frappe/erpnext.git",
     "branch": "version-16"
+  },
+  {
+    "url": "git@github.com:senghofreelance-max/cambo_pos_api_retail_app.git",
+    "branch": "main"
   }
 ]

@@ -113,6 +113,12 @@ def get_args_parser():
         help="Database type to use (e.g., mariadb or postgres)",
         default="mariadb",  # Set your default database type here
     )
+    parser.add_argument(
+        "--db-root-password",
+        type=str,
+        default=os.environ.get("DB_ROOT_PASSWORD", "123"),
+        help="Database root password, default: DB_ROOT_PASSWORD or root.pwd@pos2026",
+    )
     return parser
 
 
@@ -120,100 +126,109 @@ def init_bench_if_not_exist(args):
     if os.path.exists(args.bench_name):
         cprint("Bench already exists. Only site will be created", level=3)
         return
-    try:
-        env = os.environ.copy()
-        if args.py_version:
-            env["PYENV_VERSION"] = args.py_version
-        init_command = ""
-        if args.node_version:
-            init_command = f"nvm use {args.node_version};"
-        if args.py_version:
-            init_command += f"PYENV_VERSION={args.py_version} "
-        init_command += "bench init "
-        init_command += "--skip-redis-config-generation "
-        init_command += "--verbose " if args.verbose else " "
-        init_command += f"--frappe-path={args.frappe_repo} "
-        init_command += f"--frappe-branch={args.frappe_branch} "
-        init_command += f"--apps_path={args.apps_json} "
-        init_command += args.bench_name
-        command = [
-            "/bin/bash",
-            "-i",
-            "-c",
-            init_command,
-        ]
-        subprocess.call(command, env=env, cwd=os.getcwd())
-        cprint("Configuring Bench ...", level=2)
-        cprint("Set db_host", level=3)
-        if args.db_type:
-            cprint(f"Setting db_type to {args.db_type}", level=3)
-            subprocess.call(
-                ["bench", "set-config", "-g", "db_type", args.db_type],
-                cwd=os.path.join(os.getcwd(), args.bench_name),
-            )
+    env = os.environ.copy()
+    if args.py_version:
+        env["PYENV_VERSION"] = args.py_version
+    init_command = ""
+    if args.node_version:
+        init_command = f"nvm use {args.node_version};"
+    if args.py_version:
+        init_command += f"PYENV_VERSION={args.py_version} "
+    init_command += "bench init "
+    init_command += "--skip-redis-config-generation "
+    init_command += "--verbose " if args.verbose else " "
+    init_command += f"--frappe-path={args.frappe_repo} "
+    init_command += f"--frappe-branch={args.frappe_branch} "
+    init_command += f"--apps_path={args.apps_json} "
+    init_command += args.bench_name
+    command = [
+        "/bin/bash",
+        "-i",
+        "-c",
+        init_command,
+    ]
+    subprocess.run(command, env=env, cwd=os.getcwd(), check=True)
+    cprint("Configuring Bench ...", level=2)
+    cprint("Set db_host", level=3)
+    if args.db_type:
+        cprint(f"Setting db_type to {args.db_type}", level=3)
+        subprocess.run(
+            ["bench", "set-config", "-g", "db_type", args.db_type],
+            cwd=os.path.join(os.getcwd(), args.bench_name),
+            check=True,
+        )
 
-        cprint("Set redis_cache to redis://redis-cache:6379", level=3)
-        subprocess.call(
-            [
-                "bench",
-                "set-config",
-                "-g",
-                "redis_cache",
-                "redis://redis-cache:6379",
-            ],
-            cwd=os.getcwd() + "/" + args.bench_name,
-        )
-        cprint("Set redis_queue to redis://redis-queue:6379", level=3)
-        subprocess.call(
-            [
-                "bench",
-                "set-config",
-                "-g",
-                "redis_queue",
-                "redis://redis-queue:6379",
-            ],
-            cwd=os.getcwd() + "/" + args.bench_name,
-        )
-        cprint(
-            "Set redis_socketio to redis://redis-queue:6379 for backward compatibility",  # noqa: E501
-            level=3,
-        )
-        subprocess.call(
-            [
-                "bench",
-                "set-config",
-                "-g",
-                "redis_socketio",
-                "redis://redis-queue:6379",
-            ],
-            cwd=os.getcwd() + "/" + args.bench_name,
-        )
-        cprint("Set chromium_path to the system Chromium", level=3)
-        subprocess.call(
-            [
-                "bench",
-                "set-config",
-                "-g",
-                "chromium_path",
-                "/usr/lib/chromium/chromium-headless-shell",
-            ],
-            cwd=os.getcwd() + "/" + args.bench_name,
-        )
-        cprint("Set developer_mode", level=3)
-        subprocess.call(
-            ["bench", "set-config", "-gp", "developer_mode", "1"],
-            cwd=os.getcwd() + "/" + args.bench_name,
-        )
-    except subprocess.CalledProcessError as e:
-        cprint(e.output, level=1)
+    cprint("Set redis_cache to redis://redis-cache:6379", level=3)
+    subprocess.run(
+        [
+            "bench",
+            "set-config",
+            "-g",
+            "redis_cache",
+            "redis://redis-cache:6379",
+        ],
+        cwd=os.getcwd() + "/" + args.bench_name,
+        check=True,
+    )
+    cprint("Set redis_queue to redis://redis-queue:6379", level=3)
+    subprocess.run(
+        [
+            "bench",
+            "set-config",
+            "-g",
+            "redis_queue",
+            "redis://redis-queue:6379",
+        ],
+        cwd=os.getcwd() + "/" + args.bench_name,
+        check=True,
+    )
+    cprint(
+        "Set redis_socketio to redis://redis-queue:6379 for backward compatibility",  # noqa: E501
+        level=3,
+    )
+    subprocess.run(
+        [
+            "bench",
+            "set-config",
+            "-g",
+            "redis_socketio",
+            "redis://redis-queue:6379",
+        ],
+        cwd=os.getcwd() + "/" + args.bench_name,
+        check=True,
+    )
+    cprint("Set chromium_path to the system Chromium", level=3)
+    subprocess.run(
+        [
+            "bench",
+            "set-config",
+            "-g",
+            "chromium_path",
+            "/usr/lib/chromium/chromium-headless-shell",
+        ],
+        cwd=os.getcwd() + "/" + args.bench_name,
+        check=True,
+    )
+    cprint("Set developer_mode", level=3)
+    subprocess.run(
+        ["bench", "set-config", "-gp", "developer_mode", "1"],
+        cwd=os.getcwd() + "/" + args.bench_name,
+        check=True,
+    )
 
 
 def create_site_in_bench(args):
+    site_path = os.path.join(os.getcwd(), args.bench_name, "sites", args.site_name)
+    if os.path.isdir(site_path):
+        cprint(f"Site {args.site_name} already exists; skipping creation", level=3)
+        return
+
     if "mariadb" == args.db_type:
         cprint("Set db_host", level=3)
-        subprocess.call(
+        subprocess.run(
             ["bench", "set-config", "-g", "db_host", "mariadb"],
             cwd=os.getcwd() + "/" + args.bench_name,
+            check=True,
         )
         new_site_cmd = [
             "bench",
@@ -222,14 +237,15 @@ def create_site_in_bench(args):
             f"--db-host=mariadb",  # Should match the compose service name
             f"--db-type={args.db_type}",  # Add the selected database type
             f"--mariadb-user-host-login-scope=%",
-            f"--db-root-password=123",  # Replace with your MariaDB password
+            f"--db-root-password={args.db_root_password}",
             f"--admin-password={args.admin_password}",
         ]
     else:
         cprint("Set db_host", level=3)
-        subprocess.call(
+        subprocess.run(
             ["bench", "set-config", "-g", "db_host", "postgresql"],
             cwd=os.getcwd() + "/" + args.bench_name,
+            check=True,
         )
         new_site_cmd = [
             "bench",
@@ -237,7 +253,7 @@ def create_site_in_bench(args):
             f"--db-root-username=root",
             f"--db-host=postgresql",  # Should match the compose service name
             f"--db-type={args.db_type}",  # Add the selected database type
-            f"--db-root-password=123",  # Replace with your PostgreSQL password
+            f"--db-root-password={args.db_root_password}",
             f"--admin-password={args.admin_password}",
         ]
     apps = os.listdir(f"{os.getcwd()}/{args.bench_name}/apps")
@@ -246,9 +262,10 @@ def create_site_in_bench(args):
         new_site_cmd.append(f"--install-app={app}")
     new_site_cmd.append(args.site_name)
     cprint(f"Creating Site {args.site_name} ...", level=2)
-    subprocess.call(
+    subprocess.run(
         new_site_cmd,
         cwd=os.getcwd() + "/" + args.bench_name,
+        check=True,
     )
 
 
