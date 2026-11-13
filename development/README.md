@@ -2,10 +2,13 @@
 
 The devcontainer builds `frappe/bench` from `images/bench`, then its first
 `postCreateCommand` runs `installer.py` to create `dev-bench`. Bench initializes
-from `git@github.com:senghofreelance-max/frappe-16.git` on `develop` and reads
+from `https://github.com/senghofreelance-max/frappe-16.git` on `develop` and reads
 `apps-example.json`; that manifest fetches ERPNext and
 `cambo_pos_api_retail_app`. The installer then creates the configured site and
-installs the apps it fetched.
+installs the apps it fetched. It normalizes the Frappe checkout directory to
+`apps/frappe`, which Bench requires even when the Git repository has a different
+name. SSH Git URLs are normalized to HTTPS automatically so local setups do not
+need a GitHub SSH key for the default examples.
 
 ## Persistent data on Linux and Windows
 
@@ -26,11 +29,11 @@ The bench itself lives under the mounted repository at `development/dev-bench`;
 MariaDB's persistent data lives under `VOLUME_ROOT/mariadb`. Redis is ephemeral
 and has no data volume in this development setup.
 
-The custom app is cloned during `bench init` from the manifest. The SSH URL
-requires GitHub SSH access from inside the devcontainer; the existing SSH key
-mount in `devcontainer.json` provides that access. Rebuild/reopen the devcontainer
-after changing its image or compose configuration. Existing `dev-bench` folders
-are reused, so rerunning the installer does not re-fetch app sources.
+The custom app is cloned during `bench init` from the manifest. The default
+examples use HTTPS URLs, which avoids the need for a GitHub SSH key in local
+and devcontainer setups. Rebuild/reopen the devcontainer after changing its
+image or compose configuration. Existing `dev-bench` folders are reused, so
+rerunning the installer does not re-fetch app sources.
 
 ## Build an application image
 

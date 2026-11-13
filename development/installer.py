@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 import argparse
+import json
 import os
 import subprocess
+from pathlib import Path
 
 
 def cprint(*args, level: int = 1):
@@ -122,9 +124,46 @@ def get_args_parser():
     return parser
 
 
+def normalize_git_url(url: str) -> str:
+    if not isinstance(url, str):
+        return url
+    if url.startswith("git@github.com:"):
+        return f"https://github.com/{url.removeprefix('git@github.com:')}"
+    if url.startswith("ssh://git@github.com/"):
+        return url.replace("ssh://git@github.com/", "https://github.com/")
+    if url.startswith("git@bitbucket.org:"):
+        return f"https://bitbucket.org/{url.removeprefix('git@bitbucket.org:')}"
+    return url
+
+
+def normalize_apps_json(apps_path: str | os.PathLike[str]) -> None:
+    app_json = Path(apps_path)
+    if not app_json.exists():
+        return
+    with app_json.open("r", encoding="utf-8") as file:
+        manifest = json.load(file)
+
+    changed = False
+    for app in manifest:
+        url = app.get("url")
+        normalized = normalize_git_url(url)
+        if normalized != url:
+            app["url"] = normalized
+            changed = True
+
+    if changed:
+        with app_json.open("w", encoding="utf-8") as file:
+            json.dump(manifest, file, indent=2)
+            file.write("\n")
+
+
 def init_bench_if_not_exist(args):
+    normalized_frappe_repo = normalize_git_url(args.frappe_repo)
+    normalize_apps_json(args.apps_json)
+
     if os.path.exists(args.bench_name):
         cprint("Bench already exists. Only site will be created", level=3)
+        normalize_frappe_app(Path(args.bench_name))
         return
     env = os.environ.copy()
     if args.py_version:
@@ -137,7 +176,7 @@ def init_bench_if_not_exist(args):
     init_command += "bench init "
     init_command += "--skip-redis-config-generation "
     init_command += "--verbose " if args.verbose else " "
-    init_command += f"--frappe-path={args.frappe_repo} "
+    init_command += f"--frappe-path={normalized_frappe_repo} "
     init_command += f"--frappe-branch={args.frappe_branch} "
     init_command += f"--apps_path={args.apps_json} "
     init_command += args.bench_name
@@ -148,6 +187,7 @@ def init_bench_if_not_exist(args):
         init_command,
     ]
     subprocess.run(command, env=env, cwd=os.getcwd(), check=True)
+    normalize_frappe_app(Path(args.bench_name))
     cprint("Configuring Bench ...", level=2)
     cprint("Set db_host", level=3)
     if args.db_type:
@@ -215,6 +255,39 @@ def init_bench_if_not_exist(args):
         cwd=os.getcwd() + "/" + args.bench_name,
         check=True,
     )
+
+
+def normalize_frappe_app(bench_path: Path):
+    apps_path = bench_path / "apps"
+    frappe_path = apps_path / "frappe"
+    source_name = None
+    if not frappe_path.is_dir():
+        candidates = [
+            app_path
+            for app_path in apps_path.iterdir()
+            if (app_path / "frappe" / "__init__.py").is_file()
+        ]
+        if len(candidates) != 1:
+            raise RuntimeError(
+                f"Expected one Frappe checkout in {apps_path}, found {len(candidates)}"
+            )
+        source_name = candidates[0].name
+        candidates[0].rename(frappe_path)
+
+    apps_file = bench_path / "sites" / "apps.txt"
+    installed_apps = (
+        apps_file.read_text().splitlines()
+        if apps_file.exists()
+        else [app_path.name for app_path in apps_path.iterdir() if app_path.is_dir()]
+    )
+    if source_name:
+        installed_apps = [
+            "frappe" if app == source_name else app for app in installed_apps
+        ]
+    if "frappe" not in installed_apps:
+        installed_apps.insert(0, "frappe")
+    apps_file.parent.mkdir(parents=True, exist_ok=True)
+    apps_file.write_text("\n".join(installed_apps) + "\n")
 
 
 def create_site_in_bench(args):
