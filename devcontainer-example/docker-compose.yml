@@ -72,7 +72,7 @@ services:
     # Compose service DNS (pos-admin:3000) handles container-to-container calls.
   pos-admin:
     image: node:24-alpine
-    working_dir: /workspace/pos-admin-dashboard
+    working_dir: /workspace/development
     command: sh -c "npm ci && npm run dev -- --hostname 0.0.0.0"
     ports:
       - "0.0.0.0:3000:3000"
@@ -85,8 +85,8 @@ services:
       NEXT_PUBLIC_FRAPPE_URL: ${NEXT_PUBLIC_FRAPPE_URL:-http://localhost:8000}
     volumes:
       - ..:/workspace:cached
-      - pos-admin-node-modules:/workspace/pos-admin-dashboard/node_modules
-      - pos-admin-next-cache:/workspace/pos-admin-dashboard/.next
+      - pos-admin-node-modules:/workspace/development/node_modules
+      - pos-admin-next-cache:/workspace/development/.next
   # enable the below service if you need Cypress UI Tests to be executed
   # Before enabling ensure install_x11_deps.sh has been executed and display variable is exported.
   # Run install_x11_deps.sh again if DISPLAY is not set

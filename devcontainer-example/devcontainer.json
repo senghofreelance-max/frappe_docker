@@ -68,7 +68,7 @@
   "service": "frappe",
   "workspaceFolder": "/workspace/development",
   "shutdownAction": "stopCompose",
-  "postCreateCommand": "uv tool install pre-commit && python /workspace/development/installer.py --bench-name dev-bench --apps-json /workspace/development/apps-example.json --frappe-repo https://github.com/senghofreelance-max/frappe-16.git --frappe-branch develop",
+  "postCreateCommand": "uv tool install pre-commit && python /workspace/development/installer.py --bench-name dev-bench --apps-json /workspace/development/apps.json --frappe-repo https://github.com/senghofreelance-max/frappe-16.git --frappe-branch develop",
   "mounts": [
     "source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh,target=/home/frappe/.ssh,type=bind,consistency=cached"
   ]
