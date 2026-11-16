@@ -29,6 +29,13 @@ The bench itself lives under the mounted repository at `development/dev-bench`;
 MariaDB's persistent data lives under `VOLUME_ROOT/mariadb`. Redis is ephemeral
 and has no data volume in this development setup.
 
+Apps in the development manifest default to Frappe apps. Mark a standalone
+repository with `"frappe_app": false`; the installer clones it beside the
+bench under the repository name, or under the optional `"directory"` name. It
+passes only Frappe apps to `bench init`. The dashboard entry uses
+`"directory": "pos-admin-dashboard"` so the devcontainer's `pos-admin`
+service can run it at `http://localhost:3746`.
+
 The custom app is cloned during `bench init` from the manifest. The default
 examples use HTTPS URLs, which avoids the need for a GitHub SSH key in local
 and devcontainer setups. Rebuild/reopen the devcontainer after changing its

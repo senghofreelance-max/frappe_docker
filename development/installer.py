@@ -3,6 +3,7 @@ import argparse
 import json
 import os
 import subprocess
+import tempfile
 from pathlib import Path
 
 
@@ -31,6 +32,7 @@ def cprint(*args, level: int = 1):
 def main():
     parser = get_args_parser()
     args = parser.parse_args()
+    clone_standalone_apps(args)
     init_bench_if_not_exist(args)
     create_site_in_bench(args)
 
@@ -157,6 +159,57 @@ def normalize_apps_json(apps_path: str | os.PathLike[str]) -> None:
             file.write("\n")
 
 
+def app_is_frappe_app(app: dict) -> bool:
+    """Treat apps as Frappe apps unless the manifest explicitly marks them standalone."""
+    return bool(app.get("frappe_app", True))
+
+
+def app_checkout_name(app: dict) -> str:
+    """Return the requested checkout name or derive it from the repository URL."""
+    if app.get("directory"):
+        return app["directory"]
+    repo_name = app["url"].rstrip("/").rsplit("/", 1)[-1]
+    return repo_name.removesuffix(".git")
+
+
+def clone_standalone_apps(args):
+    apps_json = Path(args.apps_json)
+    if not apps_json.is_absolute():
+        apps_json = Path.cwd() / apps_json
+    if not apps_json.exists():
+        return
+
+    with apps_json.open("r", encoding="utf-8") as file:
+        apps = json.load(file)
+
+    bench_path = Path(args.bench_name)
+    if not bench_path.is_absolute():
+        bench_path = Path.cwd() / bench_path
+    development_path = bench_path.parent
+    development_path.mkdir(parents=True, exist_ok=True)
+    for app in apps:
+        if app_is_frappe_app(app):
+            continue
+
+        checkout_path = development_path / app_checkout_name(app)
+        if checkout_path.exists():
+            if (checkout_path / ".git").exists():
+                cprint(f"Repository already exists at {checkout_path}; skipping", level=3)
+                continue
+            raise FileExistsError(
+                f"Repository destination exists but is not a Git repository: {checkout_path}"
+            )
+
+        repo_url = normalize_git_url(app["url"])
+        branch = app.get("branch")
+        cprint(f"Cloning standalone repository from {repo_url} ...", level=2)
+        command = ["git", "clone"]
+        if branch:
+            command.extend(["--branch", branch])
+        command.extend([repo_url, str(checkout_path)])
+        subprocess.run(command, check=True)
+
+
 def init_bench_if_not_exist(args):
     normalized_frappe_repo = normalize_git_url(args.frappe_repo)
     normalize_apps_json(args.apps_json)
@@ -168,6 +221,21 @@ def init_bench_if_not_exist(args):
     env = os.environ.copy()
     if args.py_version:
         env["PYENV_VERSION"] = args.py_version
+    apps_json = Path(args.apps_json)
+    if not apps_json.is_absolute():
+        apps_json = Path.cwd() / apps_json
+    with apps_json.open("r", encoding="utf-8") as file:
+        apps = json.load(file)
+    frappe_apps = [
+        {
+            key: value
+            for key, value in app.items()
+            if key not in {"frappe_app", "directory"}
+        }
+        for app in apps
+        if app_is_frappe_app(app)
+    ]
+
     init_command = ""
     if args.node_version:
         init_command = f"nvm use {args.node_version};"
@@ -178,15 +246,13 @@ def init_bench_if_not_exist(args):
     init_command += "--verbose " if args.verbose else " "
     init_command += f"--frappe-path={normalized_frappe_repo} "
     init_command += f"--frappe-branch={args.frappe_branch} "
-    init_command += f"--apps_path={args.apps_json} "
-    init_command += args.bench_name
-    command = [
-        "/bin/bash",
-        "-i",
-        "-c",
-        init_command,
-    ]
-    subprocess.run(command, env=env, cwd=os.getcwd(), check=True)
+    with tempfile.TemporaryDirectory(prefix="frappe-apps-") as temp_dir:
+        frappe_apps_path = Path(temp_dir) / "apps.json"
+        frappe_apps_path.write_text(json.dumps(frappe_apps, indent=2) + "\n")
+        init_command += f"--apps_path={frappe_apps_path} "
+        init_command += args.bench_name
+        command = ["/bin/bash", "-i", "-c", init_command]
+        subprocess.run(command, env=env, cwd=os.getcwd(), check=True)
     normalize_frappe_app(Path(args.bench_name))
     cprint("Configuring Bench ...", level=2)
     cprint("Set db_host", level=3)
