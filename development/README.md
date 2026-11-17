@@ -7,8 +7,8 @@ from `https://github.com/senghofreelance-max/frappe-16.git` on `develop` and rea
 `cambo_pos_api_retail_app`. The installer then creates the configured site and
 installs the apps it fetched. It normalizes the Frappe checkout directory to
 `apps/frappe`, which Bench requires even when the Git repository has a different
-name. SSH Git URLs are normalized to HTTPS automatically so local setups do not
-need a GitHub SSH key for the default examples.
+name. Git URLs are used as configured in the manifest, so SSH URLs require an
+available SSH key with access to the repositories.
 
 ## Persistent data on Linux and Windows
 
@@ -36,11 +36,10 @@ passes only Frappe apps to `bench init`. The dashboard entry uses
 `"directory": "pos-admin-dashboard"` so the devcontainer's `pos-admin`
 service can run it at `http://localhost:3746`.
 
-The custom app is cloned during `bench init` from the manifest. The default
-examples use HTTPS URLs, which avoids the need for a GitHub SSH key in local
-and devcontainer setups. Rebuild/reopen the devcontainer after changing its
-image or compose configuration. Existing `dev-bench` folders are reused, so
-rerunning the installer does not re-fetch app sources.
+The custom app is cloned during `bench init` from the manifest. Rebuild/reopen
+the devcontainer after changing its image or compose configuration. Existing
+`dev-bench` folders are reused, so rerunning the installer does not re-fetch app
+sources.
 
 ## Build an application image
 

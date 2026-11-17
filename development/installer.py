@@ -126,39 +126,6 @@ def get_args_parser():
     return parser
 
 
-def normalize_git_url(url: str) -> str:
-    if not isinstance(url, str):
-        return url
-    if url.startswith("git@github.com:"):
-        return f"https://github.com/{url.removeprefix('git@github.com:')}"
-    if url.startswith("ssh://git@github.com/"):
-        return url.replace("ssh://git@github.com/", "https://github.com/")
-    if url.startswith("git@bitbucket.org:"):
-        return f"https://bitbucket.org/{url.removeprefix('git@bitbucket.org:')}"
-    return url
-
-
-def normalize_apps_json(apps_path: str | os.PathLike[str]) -> None:
-    app_json = Path(apps_path)
-    if not app_json.exists():
-        return
-    with app_json.open("r", encoding="utf-8") as file:
-        manifest = json.load(file)
-
-    changed = False
-    for app in manifest:
-        url = app.get("url")
-        normalized = normalize_git_url(url)
-        if normalized != url:
-            app["url"] = normalized
-            changed = True
-
-    if changed:
-        with app_json.open("w", encoding="utf-8") as file:
-            json.dump(manifest, file, indent=2)
-            file.write("\n")
-
-
 def app_is_frappe_app(app: dict) -> bool:
     """Treat apps as Frappe apps unless the manifest explicitly marks them standalone."""
     return bool(app.get("frappe_app", True))
@@ -200,7 +167,7 @@ def clone_standalone_apps(args):
                 f"Repository destination exists but is not a Git repository: {checkout_path}"
             )
 
-        repo_url = normalize_git_url(app["url"])
+        repo_url = app["url"]
         branch = app.get("branch")
         cprint(f"Cloning standalone repository from {repo_url} ...", level=2)
         command = ["git", "clone"]
@@ -211,9 +178,6 @@ def clone_standalone_apps(args):
 
 
 def init_bench_if_not_exist(args):
-    normalized_frappe_repo = normalize_git_url(args.frappe_repo)
-    normalize_apps_json(args.apps_json)
-
     if os.path.exists(args.bench_name):
         cprint("Bench already exists. Only site will be created", level=3)
         normalize_frappe_app(Path(args.bench_name))
@@ -244,7 +208,7 @@ def init_bench_if_not_exist(args):
     init_command += "bench init "
     init_command += "--skip-redis-config-generation "
     init_command += "--verbose " if args.verbose else " "
-    init_command += f"--frappe-path={normalized_frappe_repo} "
+    init_command += f"--frappe-path={args.frappe_repo} "
     init_command += f"--frappe-branch={args.frappe_branch} "
     with tempfile.TemporaryDirectory(prefix="frappe-apps-") as temp_dir:
         frappe_apps_path = Path(temp_dir) / "apps.json"
